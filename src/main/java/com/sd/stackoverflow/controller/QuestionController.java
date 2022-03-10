@@ -8,7 +8,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.transaction.Transactional;
 import java.util.List;
 
 @RestController
@@ -17,7 +16,6 @@ public class QuestionController {
 
     private final QuestionService questionService;
 
-    @Transactional
     @PostMapping("/questions/addQuestion")
     public ResponseEntity<?> addQuestion(@RequestBody Question question) {
         Question addedQuestion = questionService.addQuestion(question);

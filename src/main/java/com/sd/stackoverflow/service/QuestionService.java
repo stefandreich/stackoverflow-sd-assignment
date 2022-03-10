@@ -7,6 +7,7 @@ import com.sd.stackoverflow.service.customexceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +41,7 @@ public class QuestionService {
         return foundQuestion.get();
     }
 
+    @Transactional
     public Question addQuestion(Question givenQuestion) throws ResourceNotFoundException {
         if (givenQuestion.getQuestionId() != null) {
             throw new ResourceNotFoundException("Question" + givenQuestion.getQuestionId() + " already found. Cannot perform create operation.");

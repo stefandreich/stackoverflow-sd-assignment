@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -21,6 +22,8 @@ public class QuestionDTO {
     private String tag;
     private Integer posVotes;
     private Integer negVotes;
+    private List<Long> answers;
+    private List<Long> tags;
 
     public static QuestionDTO fromQuestionEntity(Question question) {
         return QuestionDTO.builder()

@@ -1,13 +1,15 @@
 package com.sd.stackoverflow.dto;
 
-import com.sd.stackoverflow.model.Question;
+import com.sd.stackoverflow.model.Tag;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -19,20 +21,10 @@ public class QuestionDTO {
     private String title;
     private String questionText;
     private LocalDateTime questionDateCreated;
-    private String tag;
+    private UserDTO user;
     private Integer posVotes;
     private Integer negVotes;
-    private List<Long> answers;
-    private List<Long> tags;
-
-    public static QuestionDTO fromQuestionEntity(Question question) {
-        return QuestionDTO.builder()
-                .questionId(question.getQuestionId())
-                .title(question.getTitle())
-                .questionText(question.getQuestionText())
-                .questionDateCreated(question.getQuestionDateCreated())
-                .posVotes(question.getPosVotes())
-                .negVotes(question.getNegVotes())
-                .build();
-    }
+    private Boolean currentUserVote;
+    private List<AnswerDTO> answers = new ArrayList<>();
+    private Set<Tag> tags;
 }

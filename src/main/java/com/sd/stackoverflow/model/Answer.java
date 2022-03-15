@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "answers")
+@Table(name = "answer")
 public class Answer {
 
     @Id
@@ -25,12 +25,6 @@ public class Answer {
 
     @Column(name = "answer_date_created")
     private LocalDateTime answerTextCreated;
-
-    @Column(name = "pos_votes")
-    private Integer posVotes;
-
-    @Column(name = "neg_votes")
-    private Integer negVotes;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

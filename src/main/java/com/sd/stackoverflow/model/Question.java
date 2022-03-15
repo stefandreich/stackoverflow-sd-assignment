@@ -1,20 +1,19 @@
 package com.sd.stackoverflow.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "questions")
+@ToString(exclude = "answers")
+@Table(name = "question")
 public class Question {
 
     @Id
@@ -30,12 +29,6 @@ public class Question {
     @Column(name = "question_date_created")
     private LocalDateTime questionDateCreated;
 
-    @Column(name = "pos_votes")
-    private Integer posVotes;
-
-    @Column(name = "neg_votes")
-    private Integer negVotes;
-
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
@@ -43,10 +36,10 @@ public class Question {
     @OneToMany(mappedBy = "question")
     private List<Answer> answers;
 
-    @ManyToMany(cascade = CascadeType.ALL)
+    @ManyToMany(cascade = CascadeType.MERGE)
     @JoinTable(
-            name = "questions_tags",
+            name = "question_tags",
             joinColumns = @JoinColumn(name = "question_id"),
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
-    private List<Tag> tags;
+    private Set<Tag> tags;
 }

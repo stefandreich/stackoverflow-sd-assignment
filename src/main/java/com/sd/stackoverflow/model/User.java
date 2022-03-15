@@ -6,14 +6,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
-import java.util.List;
 
 @Entity
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "users")
+@Table(name = "user")
 public class User {
 
     @Id
@@ -28,10 +27,4 @@ public class User {
 
     @Column(name = "password")
     private String password;
-
-    @OneToMany(mappedBy = "user")
-    private List<Question> questions;
-
-    @OneToMany(mappedBy = "user")
-    private List<Answer> answers;
 }

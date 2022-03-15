@@ -12,13 +12,12 @@ import javax.persistence.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "tag")
-public class Tag {
+@Table(name = "question_votes")
+public class QuestionVote {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long tagId;
+    @EmbeddedId
+    private QuestionVoteKey questionVoteKey;
 
-    @Column(name = "tag_text")
-    private String text;
+    @Column(name = "vote")
+    private Boolean vote;
 }

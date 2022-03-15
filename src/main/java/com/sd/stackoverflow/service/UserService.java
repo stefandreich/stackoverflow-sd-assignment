@@ -1,6 +1,7 @@
 package com.sd.stackoverflow.service;
 
 import com.sd.stackoverflow.dto.UserDTO;
+import com.sd.stackoverflow.mapper.UserMapper;
 import com.sd.stackoverflow.model.User;
 import com.sd.stackoverflow.repository.IUserRepository;
 import com.sd.stackoverflow.service.customexceptions.ConflictException;
@@ -24,52 +25,35 @@ public class UserService {
 
     private final IUserRepository iUserRepository;
 
+    private final UserMapper userMapper;
+
     public List<UserDTO> getAllUsers() throws ResourceNotFoundException {
-        List<UserDTO> userList = iUserRepository.findAll().stream()
-                .map(UserDTO::fromUserEntity)
+        return iUserRepository.findAll().stream()
+                .map(userMapper::toDTO)
                 .collect(Collectors.toList());
-
-        if (userList.isEmpty()) {
-            throw new ResourceNotFoundException("No users found in database!");
-        }
-
-        return userList;
     }
 
-    public User getUser(Long id) {
+    public UserDTO getUser(Long id) {
         Optional<User> foundUser = iUserRepository.findById(id);
 
         if (foundUser.isEmpty()) {
             throw new ResourceNotFoundException("User with id " + id + " not found.");
         }
 
-        return foundUser.get();
+        return userMapper.toDTO(foundUser.get());
     }
 
-    public User getUserByUsername(String username) throws ResourceNotFoundException {
-        User foundUser = iUserRepository.findUserByUsername(username);
+    public UserDTO getUserByUsername(String username) throws ResourceNotFoundException {
+        Optional<User> foundUser = iUserRepository.findUserByUsername(username);
 
-        if (foundUser == null) {
+        if (foundUser.isEmpty()) {
             throw new ResourceNotFoundException("Users with username " + username + " not found");
         }
 
-        return foundUser;
+        return userMapper.toDTO(foundUser.get());
     }
 
-    /*public User addUser(User givenUser) throws ResourceNotFoundException {
-        User foundUser = iUserRepository.findUserByUsername(givenUser.getUsername());
-        if (foundUser != null) {
-            throw new ResourceNotFoundException("Username " + givenUser.getUsername() + " already found. Cannot perform create operation.");
-        }
-
-        givenUser.setUsername(givenUser.getUsername());
-        givenUser.setEmail(givenUser.getEmail());
-        givenUser.setPassword(givenUser.getPassword());
-
-        return iUserRepository.save(givenUser);
-    }*/
-
-    public User addUser(User givenUser) throws InvalidDataException {
+    public UserDTO addUser(UserDTO givenUser) throws InvalidDataException {
         if (!validateUsername(givenUser.getUsername())) {
             throw new InvalidDataException("Invalid username.");
         }
@@ -79,22 +63,22 @@ public class UserService {
             throw new InvalidDataException(resultPasswordValidation);
         }
 
-        User foundUser = iUserRepository.findUserByUsername(givenUser.getUsername());
+        Optional<User> foundUser = iUserRepository.findUserByUsername(givenUser.getUsername());
 
-        if (foundUser != null) {
+        if (foundUser.isPresent()) {
             throw new ConflictException("Username " + givenUser.getUsername() + " already found. Cannot perform create operation.");
         }
 
-        return iUserRepository.save(givenUser);
+        return userMapper.toDTO(iUserRepository.save(userMapper.toEntity(givenUser)));
     }
 
-    public User updateUser(User user) throws ResourceNotFoundException {
-        User initialUser = iUserRepository.findById(user.getUserId()).orElse(null);
+    public UserDTO updateUser(UserDTO user) throws ResourceNotFoundException {
+        Optional<User> initialUser = iUserRepository.findById(user.getUserId());
 
-        if (initialUser == null) {
+        if (initialUser.isEmpty()) {
             throw new ResourceNotFoundException("User with id " + user.getUserId() + " cannot be found.");
         } else {
-            return iUserRepository.save(user);
+            return userMapper.toDTO(iUserRepository.save(userMapper.toEntity(user)));
         }
     }
 
@@ -151,5 +135,4 @@ public class UserService {
 
         return "Password OK";
     }
-
 }

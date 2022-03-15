@@ -1,16 +1,27 @@
 package com.sd.stackoverflow.service;
 
 import com.sd.stackoverflow.dto.QuestionDTO;
+import com.sd.stackoverflow.dto.QuestionVoteCounter;
+import com.sd.stackoverflow.mapper.QuestionMapper;
 import com.sd.stackoverflow.model.Question;
+import com.sd.stackoverflow.model.QuestionVote;
+import com.sd.stackoverflow.model.QuestionVoteKey;
+import com.sd.stackoverflow.model.Tag;
 import com.sd.stackoverflow.repository.IQuestionRepository;
+import com.sd.stackoverflow.repository.IQuestionVoteRepository;
+import com.sd.stackoverflow.repository.ITagRepository;
 import com.sd.stackoverflow.service.customexceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.Tuple;
 import javax.transaction.Transactional;
+import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,57 +29,142 @@ import java.util.stream.Collectors;
 public class QuestionService {
 
     private final IQuestionRepository iQuestionRepository;
+    private final ITagRepository iTagRepository;
+    private final IQuestionVoteRepository iQuestionVoteRepository;
 
-    public List<QuestionDTO> getAllQuestions() throws ResourceNotFoundException {
-        List<QuestionDTO> questionList = iQuestionRepository.findAll().stream()
-                .map(QuestionDTO::fromQuestionEntity)
+    private final QuestionMapper questionMapper;
+
+    public List<QuestionDTO> getAllQuestions(Long userId) throws ResourceNotFoundException {
+        return iQuestionRepository.findAll().stream()
+                .map(question -> questionMapper.toDTO(question, userId))
                 .collect(Collectors.toList());
-
-        if (questionList.isEmpty()) {
-            throw new ResourceNotFoundException("No questions found in database!");
-        }
-
-        return questionList;
     }
 
-    public Question getQuestion(Long id) {
+    public QuestionDTO getQuestion(Long id, Long userId) {
         Optional<Question> foundQuestion = iQuestionRepository.findById(id);
 
         if (foundQuestion.isEmpty()) {
             throw new ResourceNotFoundException("User with id " + id + " not found");
         }
 
-        return foundQuestion.get();
+        return questionMapper.toDTO(foundQuestion.get(), userId);
     }
 
     @Transactional
-    public Question addQuestion(Question givenQuestion) throws ResourceNotFoundException {
-        if (givenQuestion.getQuestionId() != null) {
-            throw new ResourceNotFoundException("Question" + givenQuestion.getQuestionId() + " already found. Cannot perform create operation.");
+    public QuestionDTO addQuestion(QuestionDTO questionDTO, Long userId) throws ResourceNotFoundException {
+        if (questionDTO.getQuestionId() != null) {
+            throw new ResourceNotFoundException("Question" + questionDTO.getQuestionId() + " already found. Cannot perform create operation.");
         }
 
-        givenQuestion.setQuestionDateCreated(LocalDateTime.now());
+        Question question = questionMapper.toEntity(questionDTO);
 
-        return iQuestionRepository.save(givenQuestion);
+        question.setQuestionDateCreated(LocalDateTime.now());
+
+        setSavedTagsOnQuestion(question);
+
+        Question getQuestionSaved = iQuestionRepository.save(question);
+
+        return questionMapper.toDTO(getQuestionSaved, userId);
     }
 
-    public Question updateQuestion(Question question) throws ResourceNotFoundException {
-        Question initialQuestion = iQuestionRepository.findById(question.getQuestionId()).orElse(null);
+    private void setSavedTagsOnQuestion(Question question) {
+        Set<Tag> savedTags = question.getTags().stream()
+                .map(tag -> {
+                    if (tag.getTagId() != null) {
+                        return tag;
+                    }
 
-        if (initialQuestion == null) {
-            throw new ResourceNotFoundException("Question with id " + question.getQuestionId() + " cannot be found.");
-        } else {
-            return iQuestionRepository.save(initialQuestion);
+                    return iTagRepository.save(tag);
+                })
+                .collect(Collectors.toSet());
+
+        question.setTags(savedTags);
+    }
+
+    // cauta dupa tag si nume (la endpoint requiredfalse [in caz de fac o singura metoda]) -> le fac io (doua metode / o metoda)
+
+    public QuestionDTO getQuestionByTag(String tag, Long userId) throws ResourceNotFoundException {
+        Optional<Question> foundQuestion = iQuestionRepository.findQuestionByTags(tag);
+
+        if (foundQuestion.isEmpty()) {
+            throw new ResourceNotFoundException("Question with tag " + tag + " not found.");
         }
+
+        return questionMapper.toDTO(foundQuestion.get(), userId);
     }
 
-    public void deleteQuestion(Long id) throws ResourceNotFoundException {
+    public QuestionDTO getQuestionByTitle(String title, Long userId) throws ResourceNotFoundException {
+        Optional<Question> foundQuestion = iQuestionRepository.findQuestionByTitle(title);
+
+        if (foundQuestion.isEmpty()) {
+            throw new ResourceNotFoundException("Question with title " + title + " not found.");
+        }
+
+        return questionMapper.toDTO(foundQuestion.get(), userId);
+    }
+
+    public QuestionDTO updateQuestion(QuestionDTO questionDTO, Long userId) throws ResourceNotFoundException {
+        if (questionDTO.getUser() == null || questionDTO.getUser().getUserId() == null) {
+            throw new ResourceNotFoundException("Question has no user.");
+        }
+
+        if (!Objects.equals(questionDTO.getUser().getUserId(), userId)) {
+            throw new ResourceNotFoundException("Question with id " + questionDTO.getQuestionId() + " cannot be found.");
+        }
+
+        Question question = questionMapper.toEntity(questionDTO);
+
+        Question getQuestionSaved = iQuestionRepository.save(question);
+
+        return questionMapper.toDTO(getQuestionSaved, userId);
+    }
+
+    public void deleteQuestion(Long id, Long userId) throws ResourceNotFoundException {
         Optional<Question> foundQuestion = iQuestionRepository.findById(id);
 
         if (foundQuestion.isEmpty()) {
             throw new ResourceNotFoundException("Given question was not found. Delete operation could not be performed");
         } else {
+            if (foundQuestion.get().getUser() == null || foundQuestion.get().getUser().getUserId() == null) {
+                throw new ResourceNotFoundException("Question has no user.");
+            }
+
+            if (!Objects.equals(foundQuestion.get().getUser().getUserId(), userId)) {
+                throw new ResourceNotFoundException("You can't delete another user question.");
+            }
             iQuestionRepository.delete(foundQuestion.get());
         }
     }
+
+    @Transactional
+    public QuestionVoteCounter voteOnQuestion(Long id, Long userId, Boolean vote) throws ResourceNotFoundException {
+        Optional<Question> foundQuestion = iQuestionRepository.findById(id);
+
+        if (foundQuestion.isEmpty()) {
+            throw new ResourceNotFoundException("Given question was not found. You cannot vote.");
+        } else {
+            if (Objects.equals(foundQuestion.get().getUser().getUserId(), userId)) {
+                throw new ResourceNotFoundException("You can't vote on your own question.");
+            }
+
+            Optional<QuestionVote> foundQuestionVote = iQuestionVoteRepository.findByQuestionVoteKey_QuestionIdAndAndQuestionVoteKey_UserId(id, userId);
+
+            if (foundQuestionVote.isPresent()) {
+                if (foundQuestionVote.get().getVote() == vote) {
+                    iQuestionVoteRepository.delete(foundQuestionVote.get());
+                } else {
+                    foundQuestionVote.get().setVote(vote);
+                    iQuestionVoteRepository.save(foundQuestionVote.get());
+                }
+            } else {
+                QuestionVote newQuestionVote = new QuestionVote(new QuestionVoteKey(id, userId), vote);
+                iQuestionVoteRepository.save(newQuestionVote);
+            }
+
+            Tuple tuple = iQuestionRepository.getQuestionVoteForAnswerID(foundQuestion.get().getQuestionId(), userId);
+            return (new QuestionVoteCounter(tuple.get(0, BigInteger.class).intValue(), tuple.get(1, BigInteger.class).intValue(), tuple.get(2, Boolean.class)));
+        }
+    }
+
+
 }

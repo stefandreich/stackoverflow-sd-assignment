@@ -6,8 +6,10 @@ import com.sd.stackoverflow.mapper.AnswerMapper;
 import com.sd.stackoverflow.model.Answer;
 import com.sd.stackoverflow.model.AnswerVote;
 import com.sd.stackoverflow.model.AnswerVoteKey;
+import com.sd.stackoverflow.model.User;
 import com.sd.stackoverflow.repository.IAnswerRepository;
 import com.sd.stackoverflow.repository.IAnswerVoteRepository;
+import com.sd.stackoverflow.repository.IUserRepository;
 import com.sd.stackoverflow.service.customexceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class AnswerService {
 
     private final IAnswerRepository iAnswerRepository;
     private final IAnswerVoteRepository iAnswerVoteRepository;
+    private final IUserRepository iUserRepository;
 
     private final AnswerMapper answerMapper;
 
@@ -50,11 +53,15 @@ public class AnswerService {
             throw new ResourceNotFoundException("Answer" + givenAnswer.getAnswerId() + " already found. Cannot perform create operation.");
         }
 
+        User currentUser = iUserRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User with id " + userId + " not found."));
+
         Answer answer = answerMapper.toEntity(givenAnswer);
+
+        answer.setUser(currentUser);
 
         answer.setAnswerTextCreated(LocalDateTime.now());
 
-        return answerMapper.toDTO(iAnswerRepository.save(answer), userId);
+        return answerMapper.toDTO(iAnswerRepository.save(answer), null);
     }
 
     // nu uita sa trimiti tot tot tot in body in Postman (question + user)

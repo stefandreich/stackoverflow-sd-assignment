@@ -13,6 +13,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Transactional
+@CrossOrigin(origins = "http://localhost:4200")
 public class UserController {
 
     private final UserService userService;
@@ -55,5 +56,16 @@ public class UserController {
     @DeleteMapping("/users/deleteUser/{id}")
     public void deleteUserById(@PathVariable(name = "id") Long id) {
         userService.deleteUser(id);
+    }
+
+    @GetMapping("/login")
+    public ResponseEntity<?> loginUser(@RequestParam String username, @RequestParam String password) {
+        UserDTO user = userService.login(username, password);
+
+        if (user != null) {
+            return ResponseEntity.ok(user);
+        } else {
+            return ResponseEntity.badRequest().body("Username or password invalid");
+        }
     }
 }

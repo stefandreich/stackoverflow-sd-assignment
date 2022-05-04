@@ -14,6 +14,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Transactional
+@CrossOrigin(origins = "http://localhost:4200")
 public class AnswerController {
 
     private final AnswerService answerService;
@@ -47,8 +48,10 @@ public class AnswerController {
     }
 
     @DeleteMapping("/answers/deleteAnswer/{id}/{userId}")
-    public void deleteAnswerById(@PathVariable Long id, @PathVariable Long userId) {
+    public ResponseEntity<?> deleteAnswerById(@PathVariable Long id, @PathVariable Long userId) {
         answerService.deleteAnswer(id, userId);
+
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/answers/setAnswerVotes/{id}/{userId}")

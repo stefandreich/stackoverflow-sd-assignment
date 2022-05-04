@@ -22,6 +22,9 @@ public class AnswerMapper {
     private final IAnswerRepository iAnswerRepository;
 
     public AnswerDTO toDTO(Answer answer, Long userId) {
+        if (answer == null) {
+            return null;
+        }
         Question question = answer.getQuestion();
 
         QuestionDTO questionDTO = QuestionDTO.builder()
@@ -56,6 +59,9 @@ public class AnswerMapper {
     }
 
     public Answer toEntity(AnswerDTO answerDTO) {
+        if (answerDTO == null) {
+            return null;
+        }
         QuestionDTO questionDTO = answerDTO.getQuestion();
 
         Question question = Question.builder()

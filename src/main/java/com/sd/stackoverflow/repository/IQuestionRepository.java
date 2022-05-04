@@ -7,12 +7,15 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import javax.persistence.Tuple;
-import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface IQuestionRepository extends JpaRepository<Question, Long> {
-    Optional<Question> findQuestionByTags(String tag);
-    Optional<Question> findQuestionByTitle(String title);
+    @Query(value = "select q from Question q " +
+            "join q.tags tag " +
+            "where q.title like CONCAT('%',:title,'%') " +
+            "or tag.text = :title")
+    Set<Question> findAllByTitleContainsAndTags(@Param("title") String title);
 
     @Query(value = "select (select count(*) from question_votes likes where likes.vote = 1 and likes.question_id = a.question_id) as posVotes, " +
             "       (select count(*) from question_votes dislikes where dislikes.vote = 0 and dislikes.question_id = a.question_id) as negVotes, " +

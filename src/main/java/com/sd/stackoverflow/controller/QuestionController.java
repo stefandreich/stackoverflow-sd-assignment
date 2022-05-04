@@ -14,6 +14,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Transactional
+@CrossOrigin(origins = "http://localhost:4200")
 public class QuestionController {
 
     private final QuestionService questionService;
@@ -39,18 +40,16 @@ public class QuestionController {
         return new ResponseEntity<>(question, HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/questions/getQuestionByTag/{userId}", method = RequestMethod.GET)
-    public ResponseEntity<?> getQuestionByTag(@RequestParam String tag, @PathVariable Long userId) {
-        QuestionDTO question = questionService.getQuestionByTag(tag, userId);
+    @RequestMapping(value = "/questions/getQuestionsByTitleAndTags/{userId}", method = RequestMethod.GET)
+    public ResponseEntity<?> getQuestionByTitle(@RequestParam String title, @PathVariable Long userId) {
+        List<QuestionDTO> question = questionService.getQuestionsByTitleAndTags(title, userId);
 
         return new ResponseEntity<>(question, HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/questions/getQuestionByTitle/{userId}", method = RequestMethod.GET)
-    public ResponseEntity<?> getQuestionByTitle(@RequestParam String title, @PathVariable Long userId) {
-        QuestionDTO question = questionService.getQuestionByTitle(title, userId);
-
-        return new ResponseEntity<>(question, HttpStatus.OK);
+    @RequestMapping(value = "/questions/getTags", method = RequestMethod.GET)
+    public ResponseEntity<?> getTags() {
+        return new ResponseEntity<>(questionService.getAllTags(), HttpStatus.OK);
     }
 
     @PostMapping("/questions/updateQuestion/{userId}")
@@ -61,8 +60,10 @@ public class QuestionController {
     }
 
     @DeleteMapping("/questions/deleteQuestion/{id}/{userId}")
-    public void deleteQuestionById(@PathVariable Long id, @PathVariable Long userId) {
+    public ResponseEntity<?> deleteQuestionById(@PathVariable Long id, @PathVariable Long userId) {
         questionService.deleteQuestion(id, userId);
+
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/questions/setQuestionVotes/{id}/{userId}")

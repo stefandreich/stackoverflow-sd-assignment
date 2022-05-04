@@ -3,13 +3,11 @@ package com.sd.stackoverflow.service;
 import com.sd.stackoverflow.dto.QuestionDTO;
 import com.sd.stackoverflow.dto.QuestionVoteCounter;
 import com.sd.stackoverflow.mapper.QuestionMapper;
-import com.sd.stackoverflow.model.Question;
-import com.sd.stackoverflow.model.QuestionVote;
-import com.sd.stackoverflow.model.QuestionVoteKey;
-import com.sd.stackoverflow.model.Tag;
+import com.sd.stackoverflow.model.*;
 import com.sd.stackoverflow.repository.IQuestionRepository;
 import com.sd.stackoverflow.repository.IQuestionVoteRepository;
 import com.sd.stackoverflow.repository.ITagRepository;
+import com.sd.stackoverflow.repository.IUserRepository;
 import com.sd.stackoverflow.service.customexceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,6 +29,7 @@ public class QuestionService {
     private final IQuestionRepository iQuestionRepository;
     private final ITagRepository iTagRepository;
     private final IQuestionVoteRepository iQuestionVoteRepository;
+    private final IUserRepository iUserRepository;
 
     private final QuestionMapper questionMapper;
 
@@ -56,15 +55,19 @@ public class QuestionService {
             throw new ResourceNotFoundException("Question" + questionDTO.getQuestionId() + " already found. Cannot perform create operation.");
         }
 
+        User currentUser = iUserRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User with id " + userId + " not found."));
+
         Question question = questionMapper.toEntity(questionDTO);
 
         question.setQuestionDateCreated(LocalDateTime.now());
+
+        question.setUser(currentUser);
 
         setSavedTagsOnQuestion(question);
 
         Question getQuestionSaved = iQuestionRepository.save(question);
 
-        return questionMapper.toDTO(getQuestionSaved, userId);
+        return questionMapper.toDTO(getQuestionSaved, null);
     }
 
     private void setSavedTagsOnQuestion(Question question) {
@@ -81,26 +84,14 @@ public class QuestionService {
         question.setTags(savedTags);
     }
 
-    // cauta dupa tag si nume (la endpoint requiredfalse [in caz de fac o singura metoda]) -> le fac io (doua metode / o metoda)
+    public List<QuestionDTO> getQuestionsByTitleAndTags(String title, Long userId) throws ResourceNotFoundException {
+        Set<Question> foundQuestions = iQuestionRepository.findAllByTitleContainsAndTags(title);
 
-    public QuestionDTO getQuestionByTag(String tag, Long userId) throws ResourceNotFoundException {
-        Optional<Question> foundQuestion = iQuestionRepository.findQuestionByTags(tag);
-
-        if (foundQuestion.isEmpty()) {
-            throw new ResourceNotFoundException("Question with tag " + tag + " not found.");
-        }
-
-        return questionMapper.toDTO(foundQuestion.get(), userId);
+        return foundQuestions.stream().map(question -> questionMapper.toDTO(question, userId)).collect(Collectors.toList());
     }
 
-    public QuestionDTO getQuestionByTitle(String title, Long userId) throws ResourceNotFoundException {
-        Optional<Question> foundQuestion = iQuestionRepository.findQuestionByTitle(title);
-
-        if (foundQuestion.isEmpty()) {
-            throw new ResourceNotFoundException("Question with title " + title + " not found.");
-        }
-
-        return questionMapper.toDTO(foundQuestion.get(), userId);
+    public List<Tag> getAllTags() {
+        return iTagRepository.findAll();
     }
 
     public QuestionDTO updateQuestion(QuestionDTO questionDTO, Long userId) throws ResourceNotFoundException {

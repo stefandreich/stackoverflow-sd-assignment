@@ -135,4 +135,9 @@ public class UserService {
 
         return "Password OK";
     }
+
+    public UserDTO login(String username, String password) {
+        Optional<User> user = iUserRepository.findUserByUsernameAndPassword(username, password);
+        return user.map(userMapper::toDTO).orElse(null);
+    }
 }
